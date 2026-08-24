@@ -1,0 +1,32 @@
+{
+  "name": "platego-local-suite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev-local.mjs",
+    "dev:web": "npm run dev -w @platego/web",
+    "dev:extension": "npm run dev -w @platego/extension",
+    "build:extension": "npm run build -w @platego/extension",
+    "build": "npm run build --workspaces --if-present",
+    "test:unit": "vitest run",
+    "test:extension-contract": "npm run test -w @platego/extension",
+    "test": "npm run test:unit && npm run test:extension-contract",
+    "test:watch": "vitest",
+    "check:extension-js": "node --check apps/extension/public/content.js && node --check apps/extension/public/background.js",
+    "validate:extension": "npm run validate -w @platego/extension",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm run check:extension-js && npm run test && npm run build && npm run validate:extension"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

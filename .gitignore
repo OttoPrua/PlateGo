@@ -1,0 +1,32 @@
+# Dependencies and build outputs
+node_modules/
+**/node_modules/**
+dist/
+**/dist/**
+**/var/**
+coverage/
+**/.vite/
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment, credentials, and local secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+*.crt
+*.session
+
+# Private companion: keep on disk, never index.
+# Includes official-page captures, vehicle/certificate fixtures,
+# shared backend implementation, and time-key validation.
+private/
+services/
+
+# Local-only documents that describe the private backend
+docs/ARCHITECTURE.md
+docs/LOCAL-ACCEPTANCE.md
+号牌沙盘-完整产品与开发设计-v1.0.md

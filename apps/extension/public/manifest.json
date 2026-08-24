@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "PlateGo · 上海选号助手",
+  "version": "0.1.0",
+  "minimum_chrome_version": "109",
+  "description": "本地优先的号牌筛选、模拟选号与上海页面辅助。自动动作止于填入，不点击验证或提交。",
+  "action": {
+    "default_title": "PlateGo",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8789/*",
+    "http://localhost:8789/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1:4173/official-mock*",
+        "http://localhost:4173/official-mock*",
+        "https://sh.122.gov.cn/*"
+      ],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

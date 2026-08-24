@@ -1,0 +1,7 @@
+body:has(.official-fixture-page) { background: #f4f4f4; }
+.official-fixture-page { min-width: 320px; min-height: 100vh; }
+.official-fixture-page .pg-official-simulator { min-height: 100vh; }
+
+@media (max-width: 700px) {
+  .official-fixture-page .pg-official-body { width: calc(100% - 18px); }
+}

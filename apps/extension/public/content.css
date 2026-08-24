@@ -1,0 +1,22 @@
+#platego-extension-host {
+  all: initial !important;
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  right: 18px !important;
+  top: 96px !important;
+  width: 370px !important;
+  max-height: calc(100vh - 118px) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif !important;
+}
+
+#platego-extension-host[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  #platego-extension-host {
+    right: 10px !important;
+    top: 70px !important;
+    width: calc(100vw - 20px) !important;
+  }
+}
