@@ -11,6 +11,7 @@ export function OfficialMock() {
       rules={SHANGHAI_SELECTION_RULES}
       fixtureContract
       returnHref="/"
+      workbenchHref="/"
     />
   </div>;
 }

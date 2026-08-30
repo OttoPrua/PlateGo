@@ -21,6 +21,11 @@ describe("public workspace safety contract", () => {
     expect(manifest.host_permissions).not.toContain("<all_urls>");
     expect(manifest.host_permissions).not.toContain("http://*/*");
     expect(manifest.host_permissions).not.toContain("https://*/*");
+    expect([...manifest.host_permissions].sort()).toEqual([
+      "http://127.0.0.1:8789/*",
+      "http://localhost:8789/*",
+      "https://api.ocr.space/*"
+    ].sort());
     expect(manifest.permissions).not.toContain("scripting");
     expect(manifest.permissions).not.toContain("tabs");
     expect(manifest.content_scripts.flatMap((entry) => entry.matches)).toContain("https://sh.122.gov.cn/*");
@@ -30,8 +35,26 @@ describe("public workspace safety contract", () => {
     const content = await readFile(resolve(root, "apps/extension/public/content.js"), "utf8");
     expect(content).not.toMatch(/\.click\s*\(/);
     expect(content).not.toMatch(/dispatchEvent\s*\(\s*new\s+(?:MouseEvent|PointerEvent)/);
-    expect(content).toContain("真实页面 DOM 尚未完成现场验收");
-    expect(content).toContain("realAdapterApproved: false");
+    expect(content).toContain("HTMLElement.prototype.click.call");
+    expect(content).toContain("official-simulation");
+    expect(content).toContain("official-live");
+    expect(content).toContain("当前官方页面不在已验收的精确选号路由内");
+    expect(content).toContain('realAdapterApproved: page.kind === "official-live"');
+    expect(content).toContain('namespace: page.kind === "official-live" ? "live-local" : "simulation"');
+  });
+
+  it("keeps position-pattern rules in dedicated local extension storage", async () => {
+    const [content, storage, dashboard] = await Promise.all([
+      readFile(resolve(root, "apps/extension/public/content.js"), "utf8"),
+      readFile(resolve(root, "packages/client-app/src/storage.ts"), "utf8"),
+      readFile(resolve(root, "apps/extension/src/dashboard.tsx"), "utf8")
+    ]);
+    expect(content).toContain('POSITION_PATTERNS_STORAGE_KEY = "platego_position_patterns"');
+    expect(content).toContain("persistPositionPatterns");
+    expect(content).toContain("positionPatternMatches");
+    expect(content).not.toMatch(/fetch[\s\S]{0,160}platego_position_patterns/);
+    expect(storage).toContain('POSITION_PATTERNS_KEY = "platego_position_patterns"');
+    expect(dashboard).toContain('POSITION_PATTERNS_STORAGE_KEY = "platego_position_patterns"');
   });
 
   it("keeps the exported configuration schema free of key material", async () => {

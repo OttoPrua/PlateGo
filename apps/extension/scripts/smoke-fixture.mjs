@@ -289,11 +289,13 @@ assert(storedConfig.orderedCandidates.some((item) => item.value === "沪A88888")
 assert(!storedConfig.orderedCandidates.some((item) => item.value === "沪AZZZZZ"), "Invalid candidate was not removed");
 assert(storedConfig.orderedCandidates.length === 16, `Expected retained + 15 added candidates, got ${storedConfig.orderedCandidates.length}`);
 
-await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=fill-group]').click(); true");
+await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=fill-self-batch]').click(); true");
 await waitFor(page, "[...document.querySelectorAll('[data-platego-candidate-input]')].every((input) => input.value.length === 5)", "first candidate group fill");
 const firstGroup = await page.evaluate("[...document.querySelectorAll('[data-platego-candidate-input]')].map((input) => input.value)");
-await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=next-group]').click(); true");
-await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=fill-group]').click(); true");
+await waitFor(page, "!document.querySelector('[data-platego-user-validate]').disabled", "user self-compose validation gate");
+await page.evaluate("window.__plategoTestUserClick('[data-platego-user-validate]'); true");
+await waitFor(page, "document.querySelector('#platego-extension-host').shadowRoot.textContent.includes('已检测到你的提交回执')", "automatic candidate group advance");
+await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=fill-self-batch]').click(); true");
 await waitFor(page, `${JSON.stringify(firstGroup)}.some((value, index) => document.querySelectorAll('[data-platego-candidate-input]')[index].value !== value)`, "second candidate group fill");
 const fillReceipt = await page.evaluate(`(() => ({
   values: [...document.querySelectorAll("[data-platego-candidate-input]")].map((input) => input.value),
@@ -301,10 +303,10 @@ const fillReceipt = await page.evaluate(`(() => ({
   validateEnabled: !document.querySelector("[data-platego-user-validate]").disabled,
   audit: window.__plategoClickAudit
 }))()`);
-assert(fillReceipt.values.every((value) => value.length === 5), "Grouped fill produced an invalid suffix");
-assert(fillReceipt.results.every((value) => value === "empty"), "Grouped fill implicitly validated candidates");
-assert(fillReceipt.validateEnabled, "Grouped fill did not leave a real user validation action available");
-assertNoExtensionPageActions(fillReceipt.audit, "grouped candidate fill");
+assert(fillReceipt.values.every((value) => value.length === 5), "Sequential batch fill produced an invalid suffix");
+assert(fillReceipt.results.every((value) => value === "empty"), "Sequential batch fill implicitly validated candidates");
+assert(fillReceipt.validateEnabled, "Sequential batch fill did not leave a real user validation action available");
+assertNoExtensionPageActions(fillReceipt.audit, "sequential candidate batch fill");
 
 await page.evaluate("document.querySelector('#platego-extension-host').shadowRoot.querySelector('[data-action=upload]').click(); true");
 await waitFor(page, "document.querySelector('#platego-extension-host').shadowRoot.textContent.includes('公共模拟观察已上传')", "confirmed public simulation upload");

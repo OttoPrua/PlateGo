@@ -201,7 +201,7 @@ function SelectionAssistant({ controller, surface, config, snapshot, apiBase, on
 
     <section className="pg-fill-section">
       <div className="pg-assistant-section-title"><div><small>有序候选</small><h3>分组填入后立即交还用户</h3></div><span>第 {safeGroupIndex + 1} / {groupCount} 组</span></div>
-      {currentGroup.length ? <div className="pg-fill-candidates">{Array.from({ length: groupSize }, (_, index) => <div key={index}><span>意向 {index + 1}</span><strong>{currentGroup[index]?.value ?? "空"}</strong></div>)}</div> : <div className="pg-assistant-empty">当前地区还没有有序候选。可从本批评分记录，或在“策略配置”中手动加入。</div>}
+      {currentGroup.length ? <div className="pg-fill-candidates">{Array.from({ length: groupSize }, (_, index) => <div key={index}><span>意向 {index + 1}</span><strong>{currentGroup[index]?.value ?? "空"}</strong></div>)}</div> : <div className="pg-assistant-empty">当前地区还没有有序候选。可从本批评分记录，或在“偏好预设 / 号池筛选”中加入。</div>}
       <div className="pg-fill-footer"><div><button type="button" disabled={safeGroupIndex === 0} onClick={() => setGroupIndex(Math.max(0, safeGroupIndex - 1))}>上一组</button><button type="button" disabled={safeGroupIndex >= groupCount - 1} onClick={() => setGroupIndex(Math.min(groupCount - 1, safeGroupIndex + 1))}>下一组</button></div><button type="button" className="pg-helper-primary" disabled={!currentGroup.length} onClick={fillCurrentGroup}>填入本组（不验证）</button></div>
       <p className="pg-helper-handoff">填入完成后，助手不会显示或触发产品内“最终确认”；请回到上方官方结构模拟区，由你决定是否验证或确认选号。</p>
     </section>

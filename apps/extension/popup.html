@@ -7,7 +7,19 @@
       <p id="page-status">正在读取当前页面…</p>
       <button id="toggle-assistant" class="primary" disabled>显示 / 隐藏页面助手</button>
       <button id="open-dashboard">打开完整插件工作台</button>
-      <div class="popup-rule">插件不会点击验证或提交</div>
+      <section class="popup-settings">
+        <strong>合格证识别</strong>
+        <label>OCR.space 密钥
+          <input id="ocr-key" type="text" autocomplete="off" spellcheck="false" placeholder="可空，默认试用" />
+        </label>
+        <label>识别语言
+          <select id="ocr-language">
+            <option value="chs">简体中文</option>
+            <option value="cht">繁体中文</option>
+          </select>
+        </label>
+      </section>
+      <div class="popup-rule">插件不会点击验证或提交。合格证照片只发给 OCR.space。</div>
     </main>
     <script type="module" src="/src/popup.ts"></script>
   </body>

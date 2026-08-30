@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import type { PoolSnapshot } from "@platego/core";
+import { SHANGHAI_12123_SEGMENT_PUB, SHANGHAI_12123_SELECT, type PoolSnapshot } from "@platego/core";
 import {
   OFFICIAL_FLOW_STEPS,
   allowedIntentKeys,
@@ -19,6 +19,16 @@ import {
   type SelectionMode,
   type SelectionRegionRules
 } from "./officialSelectionState";
+
+function escapeSrcDoc(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
+const BRAND_SEARCH_OFFICIAL_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:8px;font:12px/1.6 sans-serif;color:#333}.form-inline{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.help-inline input[type=text]{height:28px;width:150px;border:1px solid #c5c5c5;padding:0 8px}table{width:100%;margin-top:10px;border-collapse:collapse}th,td{border:1px solid #eee;padding:4px;text-align:center}</style></head><body><div class="mem-block"><div id="searchHistory"><form class="form-inline" id="formsearch"><input type="hidden" id="clzl" name="clzl" value="0"><input type="hidden" id="hpzl" name="hpzl" value="52"><input type="hidden" id="lxfs" name="lxfs" value=""><div class="help-inline"><label>车辆品牌</label><input type="text" id="clpp" name="clpp" placeholder="请输入车辆品牌"></div><div class="help-inline"><label>车辆型号</label><input type="text" id="clxh" name="clxh" placeholder="请输入车辆型号" style="text-transform:uppercase"></div><div class="help-inline"><button type="button" class="btn btn-primary" id="btnSearch">查询</button></div></form></div><div id="tableContent"><table class="table table-striped"><thead><tr><th></th><th>车辆品牌</th><th>车辆型号</th></tr></thead><tbody><tr><td><input type="radio" name="ppxh" val-clpp="示例牌" val-clxh="DEMO01BEV01"></td><td title="示例牌">示例牌</td><td title="DEMO01BEV01">DEMO01BEV01</td></tr></tbody></table></div></div></body></html>`;
+
+const BRAND_SEARCH_EASYUI_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:12px;font:12px/1.6 sans-serif;color:#333}.row{margin:8px 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.searchbox,.textbox{position:relative;display:inline-block}.searchbox-text,.textbox-text-wrap{display:inline-block}input.textbox-text{height:28px;width:150px;border:1px solid #c5c5c5;padding:0 8px;background:#fff}.textbox-prompt,.searchbox-prompt{position:absolute;left:10px;top:5px;color:#aaa;pointer-events:none}.pager{width:28px;height:22px}</style></head><body><div>查询条件</div><div class="row"><span class="searchbox"><span class="searchbox-text"><input class="textbox-text" type="text" autocomplete="off" data-platego-vehicle-field="brand"></span><span class="searchbox-prompt">请输入车辆品牌</span><input type="hidden" class="textbox-value" name="ppmc"></span><span class="textbox"><span class="textbox-text-wrap"><input class="textbox-text" type="text" autocomplete="off" data-platego-vehicle-field="model"></span><span class="textbox-prompt">请输入车辆型号</span><input type="hidden" class="textbox-value" name="clxh"></span><input class="textbox-text pager" name="page" value="1" aria-label="页"><button type="button">查询</button></div></body></html>`;
+
+const BRAND_SEARCH_WRAPPER_HTML = `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><iframe title="查询表单" src="/veh1/netxh/queryPpxh?clzl=0&hpzl=52" style="width:100%;height:220px;border:0" srcdoc="${escapeSrcDoc(BRAND_SEARCH_OFFICIAL_HTML)}"></iframe><iframe title="EasyUI查询表单" style="width:100%;height:110px;border:0" srcdoc="${escapeSrcDoc(BRAND_SEARCH_EASYUI_HTML)}"></iframe></body></html>`;
 
 export interface OfficialSelectionController {
   step: OfficialViewStep;
@@ -42,6 +52,7 @@ export interface OfficialSelectionFlowProps {
   fixtureContract?: boolean;
   returnHref?: string;
   renderAssistant?: (controller: OfficialSelectionController) => ReactNode;
+  workbenchHref?: string;
 }
 
 const NAV_ITEMS = ["首页", "业务办理", "服务导航", "公告公布", "APP下载", "办事指南"];
@@ -54,7 +65,8 @@ export function OfficialSelectionFlow({
   rules: rulesProp,
   fixtureContract = false,
   returnHref,
-  renderAssistant
+  renderAssistant,
+  workbenchHref = ""
 }: OfficialSelectionFlowProps) {
   const rules = rulesProp ?? selectionRulesForRegion(snapshot.regionCode);
   const [step, setStep] = useState<OfficialViewStep>("LOGIN");
@@ -239,6 +251,7 @@ export function OfficialSelectionFlow({
   return <div
     className="pg-official-simulator"
     data-platego-adapter-root={snapshot.regionCode === "310000" ? "shanghai-v1" : "local-region-v1"}
+    data-platego-flow-step={step === "PLATE_SELECTION" ? "SELECT" : step}
     data-platego-namespace="simulation"
     data-platego-target-length={snapshot.graph.maxLength}
     data-platego-region-code={snapshot.regionCode}
@@ -249,6 +262,13 @@ export function OfficialSelectionFlow({
       <strong>本地模拟 · 非官方</strong>
       <span>不连接真实身份验证，不保存选号结果，请勿输入真实姓名、证件、车架号、手机号或验证码。</span>
     </div>
+
+    {step !== "PLATE_SELECTION" && <nav className="pg-entry-nav" aria-label="PlateGo 导航">
+      <a href={SHANGHAI_12123_SELECT} target="_blank" rel="noreferrer">12123 选号站</a>
+      <a href={SHANGHAI_12123_SEGMENT_PUB} target="_blank" rel="noreferrer">号段公示</a>
+      <a href={`${workbenchHref}#prefs`}>偏好预设</a>
+      <a href={`${workbenchHref}#pool`}>号池筛选</a>
+    </nav>}
 
     <header className="pg-gov-header">
       <div className="pg-gov-utility"><span>切换公安交通管理部门：{snapshot.regionName}</span><span>本地兼容与测试样机</span></div>
@@ -367,7 +387,7 @@ export function OfficialSelectionFlow({
               <button type="button" className="pg-primary-button wide" disabled={!selfReady} data-platego-user-validate onClick={confirmSelfCompose}>确认选号{selfSeconds > 0 ? `（${selfSeconds}）` : ""}</button>
             </div>
           </section>}
-          <p className="pg-human-boundary">选号助手只可读取、评分、记录、填入、退格与遍历键盘；验证、确认选号和提交始终等待用户亲自操作。</p>
+          <p className="pg-human-boundary">选号助手只可读取、在号码外框高亮、记录、填入、退格与遍历键盘；验证、确认选号和提交始终等待用户亲自操作。</p>
         </div>}
 
         {step === "COMPLETE" && <CompleteStep value={completedValue} method={completedMethod} snapshot={snapshot} onReset={resetFlow} />}
@@ -437,9 +457,24 @@ function ConfirmInfoStep({ confirmed, onConfirmed, loginType, snapshot, onBack, 
   onBack(): void;
   onNext(): void;
 }) {
+  const [searchOpen, setSearchOpen] = useState(false);
   return <div className="pg-step-content">
     <div className="pg-step-heading"><div><h1>确认信息</h1><p>录入并核对选号凭证与车辆识别代号；下列内容均为本地虚构占位。</p></div><span>步骤 2 / 6</span></div>
-    <div className="pg-form-table pg-confirm-form"><label><span>机动车凭证</span><input readOnly value="虚构机动车合格证" /></label><label><span>凭证编号</span><input readOnly value="SIM-310000-2026-001" /></label><label><span>车辆识别代号</span><input readOnly value="TESTVIN31000000001" /></label><label><span>所有人</span><input readOnly value="沪测用户（虚构）" /></label></div>
+    <div className="pg-form-table pg-confirm-form" id="vehForm">
+      <label><span>号牌种类</span><input data-platego-vehicle-field="plateKind" defaultValue={snapshot.plateType === "small_nev" ? "小型新能源汽车（模拟）" : "小型汽车（模拟）"} /></label>
+      <label><span>品牌型号</span><button id="btnPpxh" type="button" className="pg-brand-search-opener" data-label="请点此查询选择车辆品牌型号" onClick={() => setSearchOpen(true)}>请点此查询选择车辆品牌型号</button><input type="hidden" id="clpp" name="clpp" /><input type="hidden" id="clxh" name="clxh" /></label>
+      <label><span>合格证编号</span><input data-platego-vehicle-field="certificateNo" defaultValue="SIM-310000-2026-001" /></label>
+      <label><span>车辆识别代号</span><input data-platego-vehicle-field="vin" defaultValue="TESTVIN31000000001" /></label>
+      <label><span>所有人</span><input readOnly value="沪测用户（虚构）" /></label>
+    </div>
+    {searchOpen ? <div className="window pg-brand-search-window" role="dialog" aria-label="选择车辆品牌型号">
+      <div className="window-header">选择车辆品牌型号</div>
+      <iframe
+        title="车辆品牌型号查询"
+        srcDoc={BRAND_SEARCH_WRAPPER_HTML}
+      />
+      <div className="pg-brand-search-actions"><button type="button" onClick={() => setSearchOpen(false)}>确定</button></div>
+    </div> : null}
     <dl className="pg-confirm-list compact"><div><dt>登录类型</dt><dd>{loginType}</dd></div><div><dt>办理地区</dt><dd>{snapshot.regionName}</dd></div><div><dt>号牌种类</dt><dd>{snapshot.plateType === "small_nev" ? "小型新能源汽车" : "小型汽车"}</dd></div><div><dt>号牌前缀</dt><dd>{snapshot.prefix}</dd></div><div><dt>联系方式</dt><dd>138****0000（虚构）</dd></div></dl>
     <label className="pg-check confirm"><input type="checkbox" data-platego-user-confirm-info checked={confirmed} onChange={(event) => onConfirmed(event.target.checked)} />我确认以上均为模拟占位资料，不会用于正式选号。</label>
     <div className="pg-official-actions"><button type="button" className="pg-secondary-button" onClick={onBack}>上一步</button><button type="button" className="pg-primary-button" disabled={!confirmed} data-platego-user-gate-action onClick={onNext}>确认并继续</button></div>

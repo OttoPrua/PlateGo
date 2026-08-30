@@ -17,7 +17,7 @@
     "test:extension-contract": "npm run test -w @platego/extension",
     "test": "npm run test:unit && npm run test:extension-contract",
     "test:watch": "vitest",
-    "check:extension-js": "node --check apps/extension/public/content.js && node --check apps/extension/public/background.js",
+    "check:extension-js": "node --check apps/extension/public/content.js && node --check apps/extension/public/official-rule-bridge.js && node --check apps/extension/public/background.js && node --check apps/extension/public/certificate-fields.js",
     "validate:extension": "npm run validate -w @platego/extension",
     "typecheck": "tsc -p tsconfig.json",
     "check": "npm run typecheck && npm run check:extension-js && npm run test && npm run build && npm run validate:extension"

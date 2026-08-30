@@ -29,7 +29,7 @@ export interface PoolSnapshot {
   prefix: string;
   values: string[];
   graph: TransitionGraph;
-  source: "bundled-fixed" | "backend-fixed" | "local-demo-latest" | "public-observation";
+  source: "bundled-fixed" | "backend-fixed" | "local-demo-latest" | "public-observation" | "official-capture";
   disclaimer?: string;
 }
 
@@ -52,6 +52,29 @@ export interface CandidateEntry {
   createdAt: string;
 }
 
+export interface HighlightPrefs {
+  pair: boolean;
+  pairDigits: string;
+  sequence: boolean;
+  many: boolean;
+  sequenceTargets: string;
+  manyDigits: string;
+}
+
+export type PositionPatternMode = "fixed" | "ordered";
+export type SmallBluePositionSlots = [string, string, string, string, string, string];
+export type SmallNevPositionSlots = [string, string, string, string, string, string, string];
+
+export type PositionPattern =
+  | { id: string; plateType: "small_blue"; slots: SmallBluePositionSlots; mode: PositionPatternMode; enabledRandom: boolean; enabledSelf: boolean }
+  | { id: string; plateType: "small_nev"; slots: SmallNevPositionSlots; mode: PositionPatternMode; enabledRandom: boolean; enabledSelf: boolean };
+
+export interface ComposePrefs {
+  combinations: string[];
+  segments: string[];
+  positionPatterns: PositionPattern[];
+}
+
 export interface PlateConfig {
   schemaVersion: typeof CONFIG_SCHEMA_VERSION;
   simDataVersion: string;
@@ -60,8 +83,17 @@ export interface PlateConfig {
   rules: PreferenceRule[];
   favorites: string[];
   orderedCandidates: CandidateEntry[];
+  highlightPrefs: HighlightPrefs;
+  composePrefs: ComposePrefs;
   exportedAt: string;
 }
+
+export const SHANGHAI_12123_HOME = "https://sh.122.gov.cn/";
+export const SHANGHAI_12123_SELECT = "https://sh.122.gov.cn/veh1/netxh/main?gnid=1001";
+export const SHANGHAI_12123_SEGMENT_PUB = "https://sh.122.gov.cn/m/pub/vehxhhdpub";
+export const SUGGESTED_COMPOSE_COMBINATIONS = ["1024", "2048", "400", "520", "1314"] as const;
+export const SUGGESTED_SEGMENTS = ["A", "B", "D", "F"] as const;
+export const MAX_POSITION_PATTERNS = 20 as const;
 
 export interface PublicPoolObservation {
   namespace: PoolNamespace;
@@ -101,12 +133,17 @@ export interface PoolFilter {
   contains?: string;
   excludes?: string;
   minScore?: number;
+  containsAny?: string[];
+  segments?: string[];
+  plateType?: PlateType;
+  positionPatterns?: PositionPattern[];
 }
 
 export interface ScoredValue {
   value: string;
   score: number;
   reasons: string[];
+  matchedPatternIds: string[];
 }
 
 export type EntryGate =
@@ -152,6 +189,139 @@ export function newId(prefix = "item"): string {
   return `${prefix}-${Date.now().toString(36)}-${random}`;
 }
 
+export function createDefaultHighlightPrefs(): HighlightPrefs {
+  return { pair: true, pairDigits: "", sequence: true, many: true, sequenceTargets: "", manyDigits: "" };
+}
+
+export function createDefaultComposePrefs(): ComposePrefs {
+  return { combinations: [], segments: [], positionPatterns: [] };
+}
+
+export function normalizeHighlightPrefs(value: unknown): HighlightPrefs {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    pair: record.pair !== false,
+    pairDigits: [...new Set((String(record.pairDigits ?? "").match(/\d/g) ?? []))].join(""),
+    sequence: record.sequence !== false,
+    many: record.many !== false,
+    sequenceTargets: String(record.sequenceTargets ?? "").replace(/[^0-9,，、\s]/g, "").slice(0, 80),
+    manyDigits: [...new Set((String(record.manyDigits ?? "").match(/\d/g) ?? []))].join("")
+  };
+}
+
+export function normalizeComposeToken(value: unknown, maxLength = 8): string {
+  return String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, maxLength);
+}
+
+export function normalizePositionSlot(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim().toUpperCase();
+  return /^[A-HJ-NP-Z0-9]$/.test(normalized) ? normalized : "";
+}
+
+function normalizePositionPattern(value: unknown): PositionPattern | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id.trim().slice(0, 100) : "";
+  if (!id || (record.mode !== "fixed" && record.mode !== "ordered")
+    || (record.plateType !== "small_blue" && record.plateType !== "small_nev")) return undefined;
+  const sourceSlots = Array.isArray(record.slots) ? record.slots : [];
+  if (record.plateType === "small_blue") {
+    const slots = Array.from({ length: 6 }, (_, index) => normalizePositionSlot(sourceSlots[index])) as SmallBluePositionSlots;
+    return { id, plateType: "small_blue", slots, mode: record.mode, enabledRandom: record.enabledRandom !== false, enabledSelf: record.enabledSelf !== false };
+  }
+  const slots = Array.from({ length: 7 }, (_, index) => normalizePositionSlot(sourceSlots[index])) as SmallNevPositionSlots;
+  return { id, plateType: "small_nev", slots, mode: record.mode, enabledRandom: record.enabledRandom !== false, enabledSelf: record.enabledSelf !== false };
+}
+
+export function normalizePositionPatterns(value: unknown): PositionPattern[] {
+  if (!Array.isArray(value)) return [];
+  const result: PositionPattern[] = [];
+  const seenIds = new Set<string>();
+  for (const item of value) {
+    const pattern = normalizePositionPattern(item);
+    if (!pattern || seenIds.has(pattern.id)) continue;
+    seenIds.add(pattern.id);
+    result.push(pattern);
+    if (result.length === MAX_POSITION_PATTERNS) break;
+  }
+  return result;
+}
+
+export function normalizeComposePrefs(value: unknown): ComposePrefs {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const combinations = Array.isArray(record.combinations)
+    ? [...new Set(record.combinations.map((item) => normalizeComposeToken(item)).filter((item) => item.length >= 2))].slice(0, 40)
+    : [];
+  const segments = Array.isArray(record.segments)
+    ? [...new Set(record.segments.map((item) => normalizeComposeToken(item, 1)).filter((item) => /^[A-HJ-NP-Z]$/.test(item)))].slice(0, 24)
+    : [];
+  return { combinations, segments, positionPatterns: normalizePositionPatterns(record.positionPatterns) };
+}
+
+export function plateSegmentLetter(value: string): string {
+  return String(value || "").replace(/^[\u4e00-\u9fff]/, "").slice(0, 1).toUpperCase();
+}
+
+export function normalizePlateValue(value: string): string {
+  return String(value || "").trim().toUpperCase();
+}
+
+export function positionPatternIsActive(pattern: PositionPattern): boolean {
+  return pattern.slots.some(Boolean);
+}
+
+function suffixForPositionPattern(value: string, plateType: PlateType): string | undefined {
+  const characters = Array.from(normalizePlateValue(value));
+  const expectedSuffixLength = plateType === "small_blue" ? 6 : 7;
+  if (characters.length !== expectedSuffixLength + 1 || !/^[\u3400-\u9fff]$/u.test(characters[0] ?? "")) return undefined;
+  const suffix = characters.slice(1).join("");
+  return /^[A-HJ-NP-Z0-9]+$/.test(suffix) ? suffix : undefined;
+}
+
+function matchesNormalizedPositionPattern(value: string, pattern: PositionPattern): boolean {
+  if (!positionPatternIsActive(pattern)) return false;
+  const suffix = suffixForPositionPattern(value, pattern.plateType);
+  if (!suffix) return false;
+  if (pattern.mode === "fixed") {
+    return pattern.slots.every((slot, index) => !slot || suffix[index] === slot);
+  }
+  let searchFrom = 0;
+  for (const slot of pattern.slots.filter(Boolean)) {
+    const matchedAt = suffix.indexOf(slot, searchFrom);
+    if (matchedAt < 0) return false;
+    searchFrom = matchedAt + 1;
+  }
+  return true;
+}
+
+export function matchPositionPattern(value: string, pattern: PositionPattern): boolean {
+  const normalized = normalizePositionPatterns([pattern])[0];
+  return normalized ? matchesNormalizedPositionPattern(value, normalized) : false;
+}
+
+export function matchedPositionPatternIds(
+  value: string,
+  plateType: PlateType,
+  patterns: PositionPattern[]
+): string[] {
+  return normalizePositionPatterns(patterns)
+    .filter((pattern) => pattern.plateType === plateType && matchesNormalizedPositionPattern(value, pattern))
+    .map((pattern) => pattern.id);
+}
+
+export function toggleUniqueItem(list: string[], item: string, max = 40): string[] {
+  const token = normalizeComposeToken(item);
+  if (!token) return list;
+  return list.includes(token)
+    ? list.filter((entry) => entry !== token)
+    : [...list, token].slice(0, max);
+}
+
 export function createDefaultConfig(simDataVersion: string): PlateConfig {
   return {
     schemaVersion: CONFIG_SCHEMA_VERSION,
@@ -165,6 +335,8 @@ export function createDefaultConfig(simDataVersion: string): PlateConfig {
     ],
     favorites: [],
     orderedCandidates: [],
+    highlightPrefs: createDefaultHighlightPrefs(),
+    composePrefs: createDefaultComposePrefs(),
     exportedAt: nowIso()
   };
 }
@@ -209,15 +381,20 @@ export function scoreValue(value: string, rules: PreferenceRule[]): ScoredValue 
     reasons.push("成对数字");
   }
 
-  return { value, score: Math.max(0, Math.min(100, score)), reasons: [...new Set(reasons)] };
+  return {
+    value,
+    score: Math.max(0, Math.min(100, score)),
+    reasons: [...new Set(reasons)],
+    matchedPatternIds: []
+  };
 }
 
 function hasSequence(value: string): boolean {
   const digits = value.replace(/\D/g, "");
-  for (let index = 0; index <= digits.length - 3; index += 1) {
-    const triplet = digits.slice(index, index + 3).split("").map(Number);
-    if ((triplet[1] === triplet[0] + 1 && triplet[2] === triplet[1] + 1)
-      || (triplet[1] === triplet[0] - 1 && triplet[2] === triplet[1] - 1)) return true;
+  for (let index = 0; index <= digits.length - 2; index += 1) {
+    const pair = digits.slice(index, index + 2).split("").map(Number);
+    if (pair.includes(0)) continue;
+    if (Math.abs(pair[1] - pair[0]) === 1) return true;
   }
   return false;
 }
@@ -230,11 +407,31 @@ export function filterAndScorePool(
   const prefix = filter.prefix?.trim().toUpperCase();
   const contains = filter.contains?.trim().toUpperCase();
   const excludes = filter.excludes?.trim().toUpperCase();
-  return values
+  const containsAny = [...new Set((filter.containsAny ?? [])
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean))];
+  const segments = [...new Set((filter.segments ?? [])
+    .map((item) => item.trim().toUpperCase())
+    .filter((item) => /^[A-HJ-NP-Z]$/.test(item)))];
+  const activePatterns = filter.plateType
+    ? normalizePositionPatterns(filter.positionPatterns)
+      .filter((pattern) => pattern.plateType === filter.plateType && pattern.enabledSelf && positionPatternIsActive(pattern))
+    : [];
+  const uniqueValues = [...new Set(values.map(normalizePlateValue).filter(Boolean))];
+  return uniqueValues
     .filter((value) => !prefix || value.toUpperCase().startsWith(prefix))
     .filter((value) => !contains || value.toUpperCase().includes(contains))
+    .filter((value) => !containsAny.length || containsAny.some((item) => value.toUpperCase().includes(item)))
+    .filter((value) => !segments.length || segments.includes(plateSegmentLetter(value)))
     .filter((value) => !excludes || !value.toUpperCase().includes(excludes))
-    .map((value) => scoreValue(value, rules))
+    .map((value) => ({
+      value,
+      matchedPatternIds: activePatterns
+        .filter((pattern) => matchesNormalizedPositionPattern(value, pattern))
+        .map((pattern) => pattern.id)
+    }))
+    .filter((item) => !activePatterns.length || item.matchedPatternIds.length > 0)
+    .map(({ value, matchedPatternIds }) => ({ ...scoreValue(value, rules), matchedPatternIds }))
     .filter((item) => item.score >= (filter.minScore ?? 0))
     .sort((left, right) => right.score - left.score || left.value.localeCompare(right.value));
 }
@@ -403,6 +600,8 @@ export function encodePlateConfig(config: PlateConfig): string {
   const safeConfig: PlateConfig = {
     ...config,
     schemaVersion: CONFIG_SCHEMA_VERSION,
+    highlightPrefs: normalizeHighlightPrefs(config.highlightPrefs),
+    composePrefs: normalizeComposePrefs(config.composePrefs),
     exportedAt: nowIso()
   };
   const payload = stableJson(safeConfig);
@@ -421,7 +620,11 @@ export function decodePlateConfig(encoded: string): PlateConfig {
   if (!Array.isArray(parsed.rules) || !Array.isArray(parsed.favorites) || !Array.isArray(parsed.orderedCandidates)) {
     throw new Error("配置字段不完整");
   }
-  return parsed;
+  return {
+    ...parsed,
+    highlightPrefs: normalizeHighlightPrefs(parsed.highlightPrefs),
+    composePrefs: normalizeComposePrefs(parsed.composePrefs)
+  };
 }
 
 export function createObservation(input: Omit<PublicPoolObservation, "observationHash">): PublicPoolObservation {

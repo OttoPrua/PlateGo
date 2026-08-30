@@ -1,8 +1,13 @@
 import {
+  buildTransitionGraph,
   createDefaultConfig,
+  normalizeComposePrefs,
+  normalizeHighlightPrefs,
   type CandidateEntry,
   type CandidateSource,
   type PlateConfig,
+  type PlateType,
+  type PoolSnapshot,
   type PreferenceKind,
   type PreferenceRule
 } from "@platego/core";
@@ -10,7 +15,20 @@ import { getCatalog, SIM_DATA_VERSION } from "@platego/sim-data";
 
 const CONFIG_KEY = "platego:config:v1";
 const API_KEY = "platego:api-base:v1";
+export const CAPTURED_POOL_KEY = "platego:captured-pool:v1";
+export const POSITION_PATTERNS_KEY = "platego_position_patterns";
 export const DEFAULT_API_BASE = "http://127.0.0.1:8789";
+
+export interface CapturedPool {
+  schemaVersion: 1;
+  namespace: "simulation";
+  regionCode: string;
+  plateType: PlateType;
+  prefix: string;
+  coverage?: string;
+  observedAt: string;
+  values: string[];
+}
 
 interface ChromeStorageArea {
   set(items: Record<string, unknown>): Promise<void> | void;
@@ -60,7 +78,7 @@ function normalizeRules(value: unknown): PreferenceRule[] {
 function normalizeCandidates(value: unknown): CandidateEntry[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
-  return value.slice(0, 2_000).flatMap((item, index) => {
+  return value.slice(0, 50_000).flatMap((item, index) => {
     if (!isRecord(item)) return [];
     const plate = cleanString(item.value, 16);
     if (!plate || seen.has(plate)) return [];
@@ -99,6 +117,8 @@ export function normalizePlateConfig(value: unknown): PlateConfig {
     rules: normalizeRules(value.rules),
     favorites,
     orderedCandidates: normalizeCandidates(value.orderedCandidates),
+    highlightPrefs: normalizeHighlightPrefs(value.highlightPrefs),
+    composePrefs: normalizeComposePrefs(value.composePrefs),
     exportedAt: typeof value.exportedAt === "string" && value.exportedAt
       ? value.exportedAt
       : new Date().toISOString()
@@ -117,20 +137,40 @@ export function loadConfig(): PlateConfig {
 
 export async function loadExtensionConfig(): Promise<PlateConfig | undefined> {
   try {
-    const stored = await chromeStorageArea()?.get("platego_config");
-    return stored?.platego_config ? normalizePlateConfig(stored.platego_config) : undefined;
+    const stored = await chromeStorageArea()?.get(["platego_config", POSITION_PATTERNS_KEY]);
+    if (!stored?.platego_config || !isRecord(stored.platego_config)) return undefined;
+    const sharedComposePrefs = isRecord(stored.platego_config.composePrefs)
+      ? stored.platego_config.composePrefs
+      : {};
+    return normalizePlateConfig({
+      ...stored.platego_config,
+      composePrefs: {
+        ...sharedComposePrefs,
+        positionPatterns: stored[POSITION_PATTERNS_KEY]
+      }
+    });
   } catch {
     return undefined;
   }
 }
 
 export function saveConfig(config: PlateConfig, surface: "web" | "extension"): void {
-  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* keep the in-memory app usable */ }
+  const normalized = normalizePlateConfig(config);
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(normalized)); } catch { /* keep the in-memory app usable */ }
   if (surface !== "extension") return;
   try {
+    const sharedConfig = {
+      ...normalized,
+      composePrefs: {
+        combinations: normalized.composePrefs.combinations,
+        segments: normalized.composePrefs.segments
+      }
+    };
     const result = chromeStorageArea()?.set({
-      platego_config: config,
-      platego_config_updated_at: new Date().toISOString()
+      platego_config: sharedConfig,
+      [POSITION_PATTERNS_KEY]: normalized.composePrefs.positionPatterns,
+      platego_config_updated_at: new Date().toISOString(),
+      platego_number_tips: normalized.highlightPrefs
     });
     if (result && "catch" in result) void result.catch(() => undefined);
   } catch { /* Chrome storage can be unavailable in a standalone preview */ }
@@ -143,6 +183,64 @@ export function loadApiBase(): string {
 
 export function resolveApiBasePreference(storedValue: string | null): string {
   return storedValue ?? DEFAULT_API_BASE;
+}
+
+export function normalizeCapturedPool(value: unknown): CapturedPool | undefined {
+  if (!isRecord(value) || value.schemaVersion !== 1 || value.namespace !== "simulation") return undefined;
+  if (!REGION_CODES.has(String(value.regionCode)) || !PLATE_TYPES.has(value.plateType as PlateType)) return undefined;
+  const prefix = cleanString(value.prefix, 8);
+  const values = Array.isArray(value.values)
+    ? [...new Set(value.values.map((item) => cleanString(item, 16)).filter((item) => item.startsWith(prefix)))].slice(0, 50_000)
+    : [];
+  if (!prefix || values.length === 0) return undefined;
+  return {
+    schemaVersion: 1,
+    namespace: "simulation",
+    regionCode: String(value.regionCode),
+    plateType: value.plateType as PlateType,
+    prefix,
+    coverage: typeof value.coverage === "string" ? value.coverage.slice(0, 32) : undefined,
+    observedAt: typeof value.observedAt === "string" && value.observedAt ? value.observedAt : new Date().toISOString(),
+    values
+  };
+}
+
+export function loadCapturedPoolSync(): CapturedPool | undefined {
+  try {
+    const raw = localStorage.getItem(CAPTURED_POOL_KEY);
+    return raw ? normalizeCapturedPool(JSON.parse(raw)) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function snapshotFromCapturedPool(captured: CapturedPool, fallback: PoolSnapshot): PoolSnapshot | undefined {
+  if (captured.regionCode !== fallback.regionCode || captured.plateType !== fallback.plateType) return undefined;
+  return {
+    namespace: "simulation",
+    regionCode: captured.regionCode,
+    regionName: fallback.regionName,
+    plateType: captured.plateType,
+    version: `official-capture-${captured.observedAt}`,
+    generatedAt: captured.observedAt,
+    prefix: captured.prefix || fallback.prefix,
+    values: captured.values,
+    graph: buildTransitionGraph(captured.values),
+    source: "official-capture",
+    disclaimer: captured.coverage === "segment-snapshot"
+      ? "可编号段快照/候选组合，不是已确认实时可用。只留在本机。"
+      : "来自官方模拟页现场读取，只留在本机。可按规则筛选后再加入填入列表。"
+  };
+}
+
+export function clearCapturedPool(surface: "web" | "extension"): void {
+  try { localStorage.removeItem(CAPTURED_POOL_KEY); } catch { /* optional */ }
+  if (surface !== "extension") return;
+  try {
+    const area = chromeStorageArea() as (ChromeStorageArea & { remove?(keys: string): Promise<void> | void }) | undefined;
+    const result = area?.remove?.("platego_captured_pool");
+    if (result && "catch" in result) void result.catch(() => undefined);
+  } catch { /* optional */ }
 }
 
 export function saveApiBase(value: string, surface: "web" | "extension"): void {

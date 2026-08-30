@@ -40,16 +40,20 @@ function remainingLabel(milliseconds: number): string {
 }
 
 export function KeyPanel({
+  surface = "web",
   config,
   apiBase,
   onApiBase,
   onSnapshot
 }: {
+  surface?: "web" | "extension";
   config: PlateConfig;
   apiBase: string;
   onApiBase(value: string): void;
   onSnapshot(snapshot: PoolSnapshot): void;
 }) {
+  const [ocrKey, setOcrKey] = useState("");
+  const [ocrLanguage, setOcrLanguage] = useState<"chs" | "cht">("chs");
   const [keyValue, setKeyValue] = useState("");
   const [session, setSession] = useState<KeySession | undefined>(readKeySession);
   const [now, setNow] = useState(Date.now);
@@ -65,6 +69,34 @@ export function KeyPanel({
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (surface !== "extension") return;
+    const area = (globalThis as unknown as {
+      chrome?: { storage?: { local?: { get(keys: string[]): Promise<Record<string, unknown>> | void } } };
+    }).chrome?.storage?.local;
+    if (!area) return;
+    const result = area.get(["platego_ocr_space_key", "platego_ocr_space_language"]);
+    if (result && "then" in result) {
+      void result.then((stored) => {
+        if (typeof stored.platego_ocr_space_key === "string") setOcrKey(stored.platego_ocr_space_key);
+        if (stored.platego_ocr_space_language === "cht") setOcrLanguage("cht");
+      });
+    }
+  }, [surface]);
+
+  const persistOcrSettings = (nextKey: string, nextLanguage: "chs" | "cht") => {
+    setOcrKey(nextKey);
+    setOcrLanguage(nextLanguage);
+    const area = (globalThis as unknown as {
+      chrome?: { storage?: { local?: { set(items: Record<string, unknown>): Promise<void> | void } } };
+    }).chrome?.storage?.local;
+    const result = area?.set({
+      platego_ocr_space_key: nextKey.trim(),
+      platego_ocr_space_language: nextLanguage
+    });
+    if (result && "catch" in result) void result.catch(() => undefined);
+  };
 
   useEffect(() => {
     if (!session || active) return;
@@ -153,6 +185,12 @@ export function KeyPanel({
         </div>}
         <div className="button-row"><button className="button primary" disabled={busy || !keyValue.trim()} onClick={() => void exchange()}>兑换密钥</button><button className="button quiet" disabled={busy} onClick={() => void createDevKey()}>生成本地测试密钥</button>{session && <button className="button quiet" disabled={busy} onClick={() => clearSession()}>清除本页会话</button>}</div>
       </Card>
+
+      {surface === "extension" ? <Card>
+        <div className="card-kicker">页面助手</div><h3>合格证识别</h3>
+        <label>OCR.space 密钥<input value={ocrKey} onChange={(event) => persistOcrSettings(event.target.value, ocrLanguage)} placeholder="可空，默认试用" autoComplete="off" spellCheck={false} /><small>只保存在本机。照片仍只发给 OCR.space，不经过 PlateGo 服务器。</small></label>
+        <label>识别语言<select value={ocrLanguage} onChange={(event) => persistOcrSettings(ocrKey, event.target.value === "cht" ? "cht" : "chs")}><option value="chs">简体中文</option><option value="cht">繁体中文</option></select></label>
+      </Card> : null}
 
       <Card>
         <div className="card-kicker">可选本地服务</div><h3>后端地址</h3><label>API 地址<input type="url" inputMode="url" value={apiBase} onChange={(event) => onApiBase(event.target.value)} /><small>PlateGo 默认使用 http://127.0.0.1:8789；已保存的自定义地址继续优先。</small></label>

@@ -11,4 +11,8 @@ body { margin: 0; width: 330px; background: #f3f6f1; color: #19231f; font-family
 button { width: 100%; min-height: 40px; margin-top: 8px; border: 1px solid #d8e0d9; border-radius: 9px; background: white; color: #145c45; font-weight: 600; cursor: pointer; }
 button.primary { border-color: #145c45; background: #145c45; color: white; }
 button:disabled { opacity: .42; cursor: not-allowed; }
+.popup-settings { margin-top: 14px; padding-top: 12px; border-top: 1px solid #dce3dc; display: grid; gap: 8px; }
+.popup-settings strong { font-size: 11px; color: #145c45; }
+.popup-settings label { display: grid; gap: 4px; color: #66716b; font-size: 10px; }
+.popup-settings input, .popup-settings select { width: 100%; min-height: 32px; padding: 0 8px; border: 1px solid #d6dfd8; border-radius: 8px; background: white; color: #19231f; font: inherit; }
 .popup-rule { margin-top: 14px; text-align: center; color: #87918c; font-size: 9px; }

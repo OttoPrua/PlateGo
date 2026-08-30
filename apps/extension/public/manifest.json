@@ -17,7 +17,8 @@
   ],
   "host_permissions": [
     "http://127.0.0.1:8789/*",
-    "http://localhost:8789/*"
+    "http://localhost:8789/*",
+    "https://api.ocr.space/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -25,12 +26,21 @@
   "content_scripts": [
     {
       "matches": [
+        "https://sh.122.gov.cn/veh1/netxh/zbxh*"
+      ],
+      "js": ["official-rule-bridge.js"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "http://127.0.0.1:4173/official-mock*",
         "http://localhost:4173/official-mock*",
         "https://sh.122.gov.cn/*"
       ],
       "css": ["content.css"],
-      "js": ["content.js"],
+      "js": ["certificate-fields.js", "content.js"],
       "run_at": "document_idle"
     }
   ]

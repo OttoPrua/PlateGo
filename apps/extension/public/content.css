@@ -3,9 +3,10 @@
   position: fixed !important;
   z-index: 2147483647 !important;
   right: 18px !important;
-  top: 96px !important;
+  bottom: 18px !important;
+  top: auto !important;
   width: 370px !important;
-  max-height: calc(100vh - 118px) !important;
+  max-height: calc(100vh - 36px) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif !important;
 }
 
@@ -13,10 +14,61 @@
   display: none !important;
 }
 
+[data-platego-next-action] {
+  outline: 3px solid #3d8f68 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(61, 143, 104, 0.28) !important;
+}
+
+[data-platego-number-tip~="sequence"] {
+  outline: 2px solid #3d8f68 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(61, 143, 104, 0.22) !important;
+}
+
+[data-platego-number-tip~="pair"] {
+  outline: 2px solid #c9a227 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.28) !important;
+}
+
+[data-platego-number-tip~="many"] {
+  outline: 2px solid #dc7654 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(220, 118, 84, 0.24) !important;
+}
+
+[data-platego-number-tip~="position"] {
+  outline: 3px solid #b257d6 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgba(178, 87, 214, 0.24) !important;
+}
+
+[data-platego-number-tip-strong~="pair"] {
+  outline: 3px solid #c9a227 !important;
+  box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.34), 0 0 18px 7px rgba(201, 162, 39, 0.4) !important;
+}
+
+[data-platego-number-tip-strong~="sequence"] {
+  outline: 3px solid #3d8f68 !important;
+  box-shadow: 0 0 0 5px rgba(61, 143, 104, 0.3), 0 0 18px 7px rgba(61, 143, 104, 0.36) !important;
+}
+
+[data-platego-number-tip-strong~="many"] {
+  outline: 3px solid #dc7654 !important;
+  box-shadow: 0 0 0 5px rgba(220, 118, 84, 0.32), 0 0 18px 7px rgba(220, 118, 84, 0.4) !important;
+}
+
+[data-platego-number-tip-strong~="position"] {
+  outline: 3px solid #b257d6 !important;
+  box-shadow: 0 0 0 6px rgba(178, 87, 214, 0.34), 0 0 20px 8px rgba(178, 87, 214, 0.44) !important;
+}
+
 @media (max-width: 520px) {
   #platego-extension-host {
     right: 10px !important;
-    top: 70px !important;
+    bottom: 10px !important;
+    top: auto !important;
     width: calc(100vw - 20px) !important;
   }
 }

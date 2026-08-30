@@ -5,13 +5,17 @@ const toggleButton = document.getElementById("toggle-assistant") as HTMLButtonEl
 const dashboardButton = document.getElementById("open-dashboard") as HTMLButtonElement;
 
 interface PageStatus {
-  kind: "official-mock" | "official-unverified" | "fixture-pending" | "fixture-invalid" | "unsupported";
+  kind: "official-mock" | "official-simulation" | "official-live" | "official-unverified" | "fixture-pending" | "fixture-invalid" | "unsupported";
   fixtureVerified: boolean;
   gate: string;
   mode: string;
   automationReady: boolean;
   randomCount: number;
-  realAdapterApproved: false;
+  realAdapterApproved: boolean;
+  officialFrameReadable?: boolean;
+  simulationFrameReadable?: boolean;
+  flowStep?: string;
+  confirmReady?: boolean;
 }
 
 async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
@@ -46,17 +50,51 @@ void activeTab().then(async (tab) => {
   const page = await readPageStatus(tab);
   if (official) {
     if (!page) {
-      setStatus("已识别 sh.122.gov.cn，但静态状态脚本尚未载入；真实适配未验收，自动动作保持关闭。请刷新页面后重试。", "warn");
+      setStatus("已识别 sh.122.gov.cn，但静态状态脚本尚未载入。请刷新页面后重试。", "warn");
       toggleButton.disabled = true;
       return;
     }
     toggleButton.disabled = false;
-    if (page.kind !== "official-unverified" || page.realAdapterApproved !== false) {
-      setStatus("上海页面返回了非预期适配状态；插件已按 fail-closed 关闭全部自动动作。", "fail");
+    toggleButton.textContent = "显示 / 隐藏安全状态";
+    if (page.kind === "official-unverified") {
+      if (page.flowStep === "CONFIRM_INFO") {
+        setStatus("已识别确认信息页。可识别合格证并写入对应栏；确认勾选与继续仍由你点击。正式选号其余能力仍关闭。", "ready");
+        return;
+      }
+      setStatus("已识别 sh.122.gov.cn。助手跟随页面步骤；确认信息页才开放填入，正式选号其余能力仍关闭。", "warn");
       return;
     }
-    setStatus("已识别 sh.122.gov.cn。真实 DOM 尚未现场验收：插件不读取、不填入、不采集、不上传。", "fail");
-    toggleButton.textContent = "显示 / 隐藏安全状态";
+    if (page.kind === "official-simulation" || page.kind === "official-live") {
+      const environmentLabel = page.kind === "official-live" ? "正式" : "模拟";
+      if (page.kind === "official-live" && !page.realAdapterApproved) {
+        setStatus("正式选号页未通过精确路由验收，已保持关闭。", "fail");
+        toggleButton.disabled = true;
+        return;
+      }
+      if (page.flowStep === "CONFIRM_INFO") {
+        setStatus("确认信息页已识别。可识别合格证并一键填入对应栏；确认勾选与继续仍由你点击。", "ready");
+        return;
+      }
+      if (page.mode !== "entry" && !page.fixtureVerified) {
+        setStatus(`官方${environmentLabel}选号壳层已识别，但选号 iframe 不可读。不填入、不采集、不上传。`, "warn");
+        return;
+      }
+      if (page.mode === "random") {
+        setStatus(`官方${environmentLabel}随机页已识别：只读 ${page.randomCount} 个号码。切到自编后才读取白色按键；换批与确认选号由你点击。`, "ready");
+        return;
+      }
+      if (page.automationReady) {
+        setStatus(`官方${environmentLabel}自编键盘已识别，助手按白色按键读取可用号池。${page.kind === "official-live" ? "数据仅保存本机；" : ""}确认选号由你点击。`, "ready");
+        return;
+      }
+      if (page.mode === "self") {
+        setStatus(`官方${environmentLabel}自编页已识别，正在等待你点击开始，并等待可见输入框与可按键盘。`, "warn");
+        return;
+      }
+      setStatus(`官方${environmentLabel}选号壳层已识别。助手不会代你切换模式；入口与验证码仍由你完成。`, "warn");
+      return;
+    }
+    setStatus("上海页面返回了非预期适配状态；插件已按 fail-closed 关闭全部自动动作。", "fail");
     return;
   }
   if (!page) {
@@ -93,3 +131,27 @@ toggleButton.addEventListener("click", async () => {
 dashboardButton.addEventListener("click", () => {
   void chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
 });
+
+const ocrKeyInput = document.getElementById("ocr-key") as HTMLInputElement | null;
+const ocrLanguageSelect = document.getElementById("ocr-language") as HTMLSelectElement | null;
+
+function normalizeOcrLanguage(value: string | undefined): "chs" | "cht" {
+  return value === "cht" ? "cht" : "chs";
+}
+
+function persistOcrSettings() {
+  if (!ocrKeyInput || !ocrLanguageSelect) return;
+  void chrome.storage.local.set({
+    platego_ocr_space_key: ocrKeyInput.value.trim(),
+    platego_ocr_space_language: normalizeOcrLanguage(ocrLanguageSelect.value)
+  });
+}
+
+if (ocrKeyInput && ocrLanguageSelect) {
+  void chrome.storage.local.get(["platego_ocr_space_key", "platego_ocr_space_language"], (stored) => {
+    ocrKeyInput.value = typeof stored.platego_ocr_space_key === "string" ? stored.platego_ocr_space_key : "";
+    ocrLanguageSelect.value = normalizeOcrLanguage(stored.platego_ocr_space_language);
+  });
+  ocrKeyInput.addEventListener("change", persistOcrSettings);
+  ocrLanguageSelect.addEventListener("change", persistOcrSettings);
+}
