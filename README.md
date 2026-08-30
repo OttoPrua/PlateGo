@@ -26,6 +26,10 @@ npm run dev
 
 网页不依赖后端即可完成免费流程。
 
+## 下载发布版
+
+首个稳定测试版为 [v0.1.0](https://github.com/OttoPrua/PlateGo/releases/tag/v0.1.0)。只使用 Chrome 插件时，可在发布页下载 `PlateGo-Chrome-v0.1.0.zip`，解压后通过 Chrome 的“加载已解压的扩展程序”载入，不需要安装 Node.js。版本变化见[更新日志](CHANGELOG.md)。
+
 ## 加载 Chrome 插件
 
 ```bash
@@ -38,7 +42,7 @@ npm run build:extension
 apps/extension/dist
 ```
 
-完整插件工作台可直接从插件弹窗打开。要测试页面助手：先保持 `npm run dev` 运行并打开本地官方页样机；或在已登录后打开上海官方模拟选号页 `https://sh.122.gov.cn/veh1/netxh/main?gnid=1001`。正式选号页保持关闭。
+完整插件工作台可直接从插件弹窗打开。要测试页面助手：先保持 `npm run dev` 运行并打开本地官方页样机；或在已登录后打开上海官方模拟选号页 `https://sh.122.gov.cn/veh1/netxh/main?gnid=1001`。上海正式选号页仅在精确识别的随机或自编选号内嵌页面中开放本机读取、高亮和填入，确认与提交始终由用户完成。
 
 ## 验证命令
 
