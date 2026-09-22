@@ -61,10 +61,14 @@ curl -fsS https://platego.ukusik.cc/latest.json
 curl -fsSI https://platego.ukusik.cc/
 curl -fsSI https://platego.ukusik.cc/latest.json
 curl -fsSI https://platego.ukusik.cc/downloads/PlateGo-Chrome-v{{VERSION}}.zip
-curl -fsSI -H 'Accept-Encoding: gzip' https://platego.ukusik.cc/
+curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' https://platego.ukusik.cc/
+curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' https://platego.ukusik.cc/latest.json
+curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' https://platego.ukusik.cc/downloads/PlateGo-Chrome-v{{VERSION}}.zip
 ```
 
 首页和版本描述应为 `Cache-Control: no-cache`；版本化 ZIP/校验文件为 `public, max-age=31536000, immutable`。响应带 ETag，再发同一路径且 `If-None-Match` 等于它时应得到 304。HTML、文本、JSON 可 gzip；ZIP 不二次压缩。未知路径（含 `/v1/pools`）为 404，本部署没有认证 API 或其缓存。
+
+压缩验收必须使用经过 Caddy 的 GET（上述 `-D - -o /dev/null` 命令），不能以 HEAD 代替。此纯公开静态站使用 `gzip_proxied any`，允许带 `Via` 请求头的代理请求按既定 MIME 类型压缩。
 
 ## 更新与回滚
 

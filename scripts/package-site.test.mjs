@@ -38,6 +38,19 @@ async function containerSmoke(directory, latest) {
     assert(download.headers.get("ETag"));
     const cached = await fetch(`${base}${latest.path}`, { headers: { "If-None-Match": download.headers.get("ETag") } });
     assert.equal(cached.status, 304);
+    const proxied = await Promise.all(["/", "/latest.json", latest.path].map(async (path) => {
+      const response = await fetch(`${base}${path}`, { headers: { "Accept-Encoding": "gzip", Via: "1.1 Caddy" } });
+      assert.equal(response.status, 200, `proxied GET ${path}`);
+      const body = Buffer.from(await response.arrayBuffer());
+      if (path === latest.path) assert.equal(sha(body), latest.sha256);
+      if (path === "/latest.json") assert.deepEqual(JSON.parse(body), latest);
+      return { path, encoding: response.headers.get("Content-Encoding") };
+    }));
+    assert.deepEqual(proxied, [
+      { path: "/", encoding: "gzip" },
+      { path: "/latest.json", encoding: "gzip" },
+      { path: latest.path, encoding: null }
+    ]);
     const sums = await fetch(`${base}/downloads/SHA256SUMS-v${latest.version}.txt`);
     assert.equal(sums.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
     assert((await sums.text()).startsWith(latest.sha256));
