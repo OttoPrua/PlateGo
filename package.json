@@ -1,6 +1,6 @@
 {
   "name": "platego-local-suite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -12,6 +12,9 @@
     "dev:web": "npm run dev -w @platego/web",
     "dev:extension": "npm run dev -w @platego/extension",
     "build:extension": "npm run build -w @platego/extension",
+    "package:extension": "npm run build:extension && npm run validate:extension && node scripts/package-extension.mjs",
+    "package:site": "npm run package:extension && node scripts/package-site.mjs",
+    "test:distribution": "node --test apps/extension/scripts/installer*.test.mjs scripts/package-site.test.mjs",
     "build": "npm run build --workspaces --if-present",
     "test:unit": "vitest run",
     "test:extension-contract": "npm run test -w @platego/extension",

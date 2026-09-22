@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "PlateGo · 上海选号助手",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "homepage_url": "https://platego.ukusik.cc/",
   "minimum_chrome_version": "109",
   "description": "本地优先的号牌筛选、模拟选号与上海页面辅助。自动动作止于填入，不点击验证或提交。",
   "action": {

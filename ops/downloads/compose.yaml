@@ -1,0 +1,43 @@
+name: platego
+
+services:
+  downloads:
+    image: ghcr.io/nginx/nginx-unprivileged:1.30.5-alpine-slim@sha256:6917744e63b3c4bde796d9d4f55e572dd77d1de860228616cad7301f2e5d1930
+    user: "101:101"
+    entrypoint: ["nginx"]
+    command: ["-g", "daemon off;"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HOST_BIND_PORT:-18801}:8080"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./site
+        target: /usr/share/nginx/html
+        read_only: true
+        bind:
+          create_host_path: false
+    cpus: "0.50"
+    mem_limit: 64m
+    pids_limit: 32
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "2m"
+        max-file: "2"

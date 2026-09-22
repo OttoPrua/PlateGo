@@ -28,7 +28,21 @@ npm run dev
 
 ## 下载发布版
 
-首个稳定测试版为 [v0.1.0](https://github.com/OttoPrua/PlateGo/releases/tag/v0.1.0)。只使用 Chrome 插件时，可在发布页下载 `PlateGo-Chrome-v0.1.0.zip`，解压后通过 Chrome 的“加载已解压的扩展程序”载入，不需要安装 Node.js。版本变化见[更新日志](CHANGELOG.md)。
+安装包版本为 **v0.1.1**。从 [PlateGo 下载页](https://platego.ukusik.cc/) 下载 `PlateGo-Chrome-v0.1.1.zip`，解压后双击 macOS 的 `Install.command` 或 Windows 的 `Install-Windows.cmd`。安装助手会校验文件、准备固定目录并打开浏览器扩展管理页，不需要安装 Node.js。
+
+首次仍需在 Chrome 中打开“开发者模式”，点击“加载已解压的扩展程序”，选择助手提供的目录。以后更新安装包后，在扩展页点“重新加载”。完整步骤、系统授权与已有配置迁移说明见[安装与更新指南](docs/INSTALL.md)。
+
+已经从其他目录加载旧版的用户，请先在插件工作台导出配置；更换加载目录可能产生新的扩展 ID。助手不会移除已有扩展或清空浏览器资料。
+
+历史发布见 [GitHub Releases](https://github.com/OttoPrua/PlateGo/releases)，版本变化见[更新日志](CHANGELOG.md)。
+
+## 打包与下载站部署
+
+```bash
+npm run package:site
+```
+
+该命令生成插件安装 ZIP 和独立 Docker Compose 静态下载站包，输出在 `dist/releases/` 和 `dist/deployment/`。下载站包含公开安装包、中文说明和版本信息；付费授权和真实号池服务尚未随此站点部署。部署说明见 [ops/downloads](ops/downloads/README.zh-CN.md)。
 
 ## 加载 Chrome 插件
 

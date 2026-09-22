@@ -1,0 +1,15 @@
+{
+  "image": "ghcr.io/nginx/nginx-unprivileged:1.30.5-alpine-slim@sha256:6917744e63b3c4bde796d9d4f55e572dd77d1de860228616cad7301f2e5d1930",
+  "version": "1.30.5-alpine-slim",
+  "digest": "sha256:6917744e63b3c4bde796d9d4f55e572dd77d1de860228616cad7301f2e5d1930",
+  "registryManifestUrl": "https://ghcr.io/v2/nginx/nginx-unprivileged/manifests/1.30.5-alpine-slim",
+  "upstream": "https://github.com/nginx/docker-nginx-unprivileged",
+  "upstreamRevision": "bf9eed6de9a7ff412f1e37d604ee491f2cf78528",
+  "createdAt": "2026-09-21T00:06:21.838Z",
+  "verifiedAt": "2026-09-22T10:03:19.571Z",
+  "verification": "SHA256 of the registry OCI index response matched Docker-Content-Digest; version and revision are OCI index annotations.",
+  "platforms": {
+    "linux/amd64": "sha256:8da0bba292524ba409317dcf56cc6f632c12a567d4c2354937f41803d75f8234",
+    "linux/arm64": "sha256:eb9deffc38a3cda699a657506cd6380de00515889dd9ae6c9e590b8b3bff154a"
+  }
+}

@@ -2,7 +2,7 @@
 
 importScripts("certificate-fields.js");
 
-const EXTENSION_VERSION = "0.1.0";
+const EXTENSION_VERSION = "0.1.1";
 const ADAPTER_VERSION = "shanghai-dom-v1-local-fixture";
 const ALLOWED_API_ORIGINS = new Set([
   "http://127.0.0.1:8789",

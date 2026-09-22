@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlateGo 安装与更新</title>
+<style>
+body{font:17px/1.8 system-ui,sans-serif;color:#17342a;background:#f5f8f6;margin:0;padding:28px}main{max-width:820px;margin:auto;background:white;padding:30px;border-radius:18px}h1,h2{line-height:1.35}h2{margin-top:32px}code{background:#eef3f0;padding:3px 6px;overflow-wrap:anywhere}a{color:#126546}.notice{padding:16px;background:#e9f5ef;border-left:4px solid #278560}li{margin:9px 0}small{color:#50645b}
+</style>
+<main>
+<h1>PlateGo 安装与更新</h1>
+<p class="notice">无需安装 Node.js、Python 或 npm。双击脚本会校验文件、放到固定目录并打开引导；Chrome 内最后的启用和权限确认仍由你完成。全程使用你日常的 Chrome 配置。</p>
+<h2>1. 解压，然后双击</h2>
+<p>先把整个 ZIP 完整解压到本地文件夹，不要在压缩包预览中直接运行。旧版若是从其他文件夹手动加载的，先导出可以导出的号池、候选等数据，并记录偏好、车辆档案和 OCR 配置；应用未提供所有配置的一键迁移。不同加载路径可能产生不同扩展 ID，新版可能不会自动看到旧数据。先保留旧扩展和原目录，确认迁移后再自行决定是否停用。</p>
+<ul>
+<li><strong>macOS：</strong>双击 <code>Install.command</code>。若系统阻止打开，先确认下载来源，再按 macOS 提示使用右键“打开”，或“系统设置 → 隐私与安全性”中的授权入口。是否允许取决于当前系统与组织策略；脚本不会关闭 Gatekeeper、移除隔离标记或请求管理员权限。</li>
+<li><strong>Windows：</strong>双击 <code>Install-Windows.cmd</code>。它使用系统自带的 Windows PowerShell 5.1，只为本次进程设置 <code>RemoteSigned</code>，不修改全局执行策略，组织策略仍优先。失败时会选中本包的 <code>Install-Windows.ps1</code>；若提示下载标记阻止脚本，先确认来源，再右键此文件，在“属性 → 解除锁定”中对这一个文件授权并重试。也可对原 ZIP 做同样授权后重新解压。若没有该入口、要求签名或受组织管控，请联系管理员，或仅在组织允许时使用下方手动加载方式。不要关闭安全防护。</li>
+</ul>
+<p>校验失败时不要继续使用该包；重新下载并核对发布页的 SHA-256。系统仍阻止脚本时，也可以自行把包内 <code>extension</code> 完整复制到固定目录，再进行第 2 步。手动复制不含脚本的自动校验与备份保护，更新前先另存原文件夹。</p>
+<h2>2. 在 Chrome 确认加载</h2>
+<ol>
+<li>打开日常使用的 Chrome，确认选中了保存 PlateGo 数据的同一浏览器个人资料。在地址栏输入 <code>chrome://extensions</code>。</li>
+<li>开启右上角“开发者模式”，点击“加载已解压的扩展程序”。</li>
+<li>选择脚本刚打开的 <code>extension</code> 目录。脚本成功复制路径时会明确提示，并替换剪贴板原文本。macOS 选目录窗口按 <code>⌘⇧G</code> 后粘贴；Windows 粘贴到目录窗口地址栏。</li>
+<li>看到 PlateGo 卡片后，确认已启用；按需要在 Chrome 的扩展菜单中固定 PlateGo。出现权限提示时阅读并自行确认。若按钮由组织禁用，应遵循组织策略。</li>
+</ol>
+<p>固定目录：macOS 为 <code>~/Library/Application Support/PlateGo/extension</code>；Windows 为 <code>%LOCALAPPDATA%\PlateGo\extension</code>。成功加载这里以后，可以删除下载 ZIP 和解压临时目录；不要移动或删除固定目录。</p>
+<h2>3. 配置与使用</h2>
+<p>点击 PlateGo 图标，打开完整插件工作台即可使用内置模拟数据，不需要后端。上海页面助手只在已声明的上海 12123 页面范围运行；需要时在 Chrome 扩展详情检查相应网站的访问权限，再刷新页面。安装器不会代为接受权限，也不会接管浏览器。</p>
+<p>OCR 为可选项：在 PlateGo 弹窗中自行填写 OCR.space 密钥并选择识别语言，或保留默认试用；只有你主动识别合格证时，图片才发往 OCR.space。安装脚本不会写入密钥、车辆或选号配置。可选本机 API 地址为 <code>http://127.0.0.1:8789</code>，安装不会启动或部署 API。插件不会替你点击验证、选号确认或提交。</p>
+<h2>以后更新与恢复</h2>
+<p>下载新版、解压并运行同一个安装入口。脚本先暂存并验证文件，再更新固定目录；旧文件保留在 PlateGo 目录下新建的 <code>previous.*/extension</code> 文件夹，终端会显示完整路径。随后到 <code>chrome://extensions</code>，对原 PlateGo 卡片点击重新加载，并刷新已打开的页面。使用相同 Chrome 个人资料及固定加载路径可保持身份；不要移除扩展后重新添加，移除可能删除其本地数据。</p>
+<p>文件校验或暂存失败时，旧文件保持原样；替换发生错误时脚本会尝试恢复上一版，并报告结果。若断电或强制结束窗口，先确认没有安装脚本仍在运行，再检查 PlateGo 目录：如果 <code>extension</code> 缺失，把最近一份 <code>previous.*/extension</code> 移回原来的固定位置；保留其他备份，然后删除空的 <code>.install-lock</code> 文件夹后重试。恢复文件后仍需在 Chrome 重新加载。切勿把备份目录当作新的加载路径。</p>
+<p>主动回退时，把当前 <code>extension</code> 先移到另一个备份目录，再把所需的上一版 <code>extension</code> 放回固定位置并重新加载。文件备份不包含 Chrome 存储的数据；配置导出和浏览器数据备份需另行保留。确认新版正常后，可自行清理不再需要的 <code>previous.*</code> 备份。</p>
+<h2>为什么仍需点击几步？</h2>
+<p>普通 Chrome 不支持通过此脚本静默安装站外扩展。Chrome 137 起，正式品牌构建不再支持 <code>--load-extension</code> 命令行入口。此包使用官方开发者模式的手动加载入口，不是 Chrome 网上应用店安装包；若将来提供商店版，可按商店流程安装和自动更新。</p>
+<p><a href="https://developer.chrome.com/docs/extensions/how-to/distribute">Chrome 官方分发说明</a> · <a href="https://groups.google.com/a/chromium.org/g/chromium-extensions/c/1-g8EFx2BBY">Chrome 官方命令行变更公告</a></p>
+<p><small>本页无需联网也能阅读。SHA256SUMS.txt 检查包内每个文件（清单自身除外）；发布包旁的 .zip.sha256 检查整个 ZIP。校验用于检测损坏，不是代码签名或发布者身份证明，请同时确认下载来源。安装器不要求管理员权限，不改 Chrome Preferences、注册表或企业策略，不关闭浏览器，也不下载其他浏览器。</small></p>
+</main>
+</html>
